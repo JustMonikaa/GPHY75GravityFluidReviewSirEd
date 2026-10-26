@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulated Universe: Fluid Mechanics</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax for LaTeX Rendering -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- html2canvas for Screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* HSR Simulated Universe Theme Styles */
+        body {
+            background-color: #050510;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1a1a3a 0%, transparent 70%),
+                linear-gradient(0deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .su-border-cyan {
+            border: 1px solid #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(0, 240, 255, 0.1);
+        }
+
+        .su-border-gold {
+            border: 1px solid #d4af37;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3), inset 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+
+        .su-card {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(10px);
+        }
+
+        .su-btn {
+            background: rgba(0, 30, 60, 0.6);
+            border: 1px solid #336699;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .su-btn:hover:not(:disabled) {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+            transform: translateY(-2px);
+            cursor: pointer;
+        }
+
+        .su-btn:disabled {
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+
+        .correct-ans {
+            background: rgba(212, 175, 55, 0.2) !important;
+            border-color: #d4af37 !important;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.6) !important;
+            color: #fff;
+        }
+
+        .wrong-ans {
+            background: rgba(255, 50, 50, 0.2) !important;
+            border-color: #ff3232 !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .path-title {
+            background: linear-gradient(90deg, #d4af37, #fff, #d4af37);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center py-10 px-4">
+
+    <!-- Header -->
+    <header class="w-full max-w-5xl mb-8 flex justify-between items-center fade-in">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 uppercase">Simulated Universe</h1>
+            <p class="text-cyan-600 text-sm tracking-[0.2em] mt-1">DIVERGENT KNOWLEDGE MODULE // FLUID MECHANICS</p>
+        </div>
+        <div class="text-right hidden md:block text-gray-400 text-sm">
+            <p>Attempt: <span id="attempt-display" class="text-cyan-400 font-bold">1</span></p>
+            <p>System Status: <span class="text-green-400">ONLINE</span></p>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="app-container" class="w-full max-w-5xl flex flex-col items-center w-full">
+        <!-- Start Screen -->
+        <div id="start-screen" class="su-card su-border-cyan rounded-xl p-8 md:p-12 w-full text-center fade-in">
+            <h2 class="text-2xl font-semibold mb-6 text-white">Welcome, Trailblazer.</h2>
+            <p class="text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+                The Herta Space Station has prepared a simulation testing your knowledge of fluid mechanics. 
+                Your behavior, speed, and accuracy will be monitored by the Aeons. 
+                Complete the test to reveal which Path resonates with your current state of existence.
+            </p>
+            <button onclick="startQuiz()" class="su-btn px-10 py-4 rounded font-bold tracking-widest text-cyan-50 uppercase text-lg">
+                Enter Simulation
+            </button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="w-full hidden flex-col items-center">
+            <!-- Progress & Stats -->
+            <div class="w-full max-w-4xl flex justify-between items-center mb-4 text-cyan-400 font-mono text-sm px-2">
+                <span>INDEX: <span id="q-current">1</span> / <span id="q-total">26</span></span>
+                <span>SCORE: <span id="score-display">0</span></span>
+            </div>
+
+            <!-- Question Box -->
+            <div id="question-box" class="su-card w-full max-w-4xl p-6 md:p-8 rounded-xl su-border-gold mb-8 text-lg md:text-xl font-medium min-h-[120px] flex items-center shadow-lg">
+                <!-- Question text injected here -->
+            </div>
+
+            <!-- Answers Container -->
+            <div id="answers-container" class="w-full max-w-4xl">
+                <!-- Choices injected here -->
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden su-card w-full max-w-3xl p-8 md:p-12 rounded-xl su-border-cyan flex-col items-center text-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-900/20 via-transparent to-transparent pointer-events-none"></div>
+            
+            <p class="text-cyan-400 tracking-[0.3em] text-sm mb-2 font-bold z-10">SIMULATION CONCLUDED</p>
+            <h2 class="text-4xl md:text-5xl font-bold mb-6 path-title z-10">Path of <span id="path-name"></span></h2>
+            
+            <img id="path-image" src="" alt="Path Image" class="w-32 h-32 object-contain mb-6 z-10 drop-shadow-[0_0_15px_rgba(212,175,55,0.8)]" onerror="this.style.display='none'">
+            
+            <div class="flex gap-6 mb-8 z-10">
+                <div class="bg-black/50 border border-cyan-800 px-6 py-3 rounded">
+                    <p class="text-gray-400 text-xs tracking-wider">FINAL SCORE</p>
+                    <p class="text-3xl font-bold text-white"><span id="final-score"></span>%</p>
+                </div>
+                <div class="bg-black/50 border border-cyan-800 px-6 py-3 rounded">
+                    <p class="text-gray-400 text-xs tracking-wider">ATTEMPTS</p>
+                    <p class="text-3xl font-bold text-white" id="final-attempts"></p>
+                </div>
+            </div>
+
+            <p id="aeon-message" class="text-gray-300 italic leading-relaxed mb-10 max-w-2xl text-lg z-10">
+                <!-- Aeon message injected here -->
+            </p>
+
+            <button onclick="takeScreenshot()" class="su-btn px-8 py-3 rounded font-bold tracking-widest text-cyan-100 uppercase z-10 border border-cyan-400 hover:bg-cyan-900">
+                Take Screenshot
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // --- DATA ---
+        const rawQuestions = [
+            // Concept Questions
+            { q: 'Which one of the following statements best describes fluids?', choices: ['Fluids are liquids.', 'Fluids are gases.', 'Fluids are transparent.', 'Fluids are gases or liquids.', 'Fluids are opaque.'], ans: 'Fluids are gases or liquids.', isProblem: false },
+            { q: 'Which one of the following substances is not a fluid?', choices: ['mercury', 'air', 'water', 'liquid nitrogen', 'all of the above are fluids'], ans: 'all of the above are fluids', isProblem: false },
+            { q: 'In which one of the following cases is the pressure exerted on the ground by the man the largest?', choices: ['A man stands with both feet flat on the ground.', 'A man stands with one foot flat on the ground.', 'A man lies with his back flat on the ground.', 'A man kneels with both knees on the ground.', 'A man stands with the toes of one foot on the ground.'], ans: 'A man stands with the toes of one foot on the ground.', isProblem: false },
+            { q: 'Which one of the following expressions gives the correct relationship between pressure and force?', choices: ['\\(P = F/A\\)', '\\(P = FA\\)', '\\(P = F/A^2\\)', '\\(P = A/F\\)', 'There is no relationship between pressure and force.'], ans: '\\(P = F/A\\)', isProblem: false },
+            { q: 'Complete the following statement: Pressure is a measure of', choices: ['the force exerted by a fluid.', 'the force per unit area that a fluid exerts.', 'the force per unit time that a fluid exerts.', 'the impulse of a fluid.', 'the energy in a fluid.'], ans: 'the force per unit area that a fluid exerts.', isProblem: false },
+            { q: 'Which one of the following statements best describes the pressure in a static, homogeneous liquid?', choices: ['The pressure is the same at all points in the fluid.', 'The pressure is not dependent on the atmospheric pressure exerted at the surface of the liquid.', 'At a given depth in the liquid, the pressure is the same at all points at that depth.', 'The pressure depends on the type of liquid such that the denser the liquid is, the smaller the pressure will be.', 'The pressure decreases as the depth increases.'], ans: 'At a given depth in the liquid, the pressure is the same at all points at that depth.', isProblem: false },
+            { q: 'Which one of the following statements best explains why the pressure in a static fluid increases as the depth increases?', choices: ['The density of the fluid increases with depth.', 'As the depth increases, the weight of the water above a particular level increases.', 'As the depth increases, the density of the fluid decreases.', 'As depth increases, the gravitational force of the earth on the water increases.', 'The temperature of the water decreases with depth.'], ans: 'As the depth increases, the weight of the water above a particular level increases.', isProblem: false },
+            { q: 'Two dams are identical with the exception that the water reservoir behind dam A extends twice the horizontal distance behind it as that of dam B. Which one of the following statements regarding these dams is correct?', choices: ['The horizontal distance of the water behind the two dams does not determine the force on the dams.', 'Dam A is more likely to collapse than dam B if the water level rises.', 'Dam B is more likely to collapse than dam A if the water level rises.', 'The force exerted by the water on dam A is greater than that on dam B.', 'The force exerted by the water on dam B is greater than that on dam A.'], ans: 'The horizontal distance of the water behind the two dams does not determine the force on the dams.', isProblem: false },
+            { q: 'The pressure at a point in a fluid in static equilibrium depends on which of the following?', choices: ['the total depth of the fluid', 'the depth of the given point', 'the total volume of fluid', 'both choices (a) and (b)', 'both choices (a) and (c)'], ans: 'the depth of the given point', isProblem: false },
+            { q: 'Which of the following devices is used to measure atmospheric pressure?', choices: ['manometer', 'barometer', 'sphygmomanometer', 'pascalometer', 'dynamometer'], ans: 'barometer', isProblem: false },
+            { q: 'Which of the following devices is used to measure gauge pressure?', choices: ['manometer', 'barometer', 'sphygmomanometer', 'pascalometer', 'dynamometer'], ans: 'manometer', isProblem: false },
+            { q: 'Which of the following devices is used to measure blood pressure?', choices: ['manometer', 'barometer', 'sphygmomanometer', 'pascalometer', 'dynamometer'], ans: 'sphygmomanometer', isProblem: false },
+            { q: 'Consider the drawing of the liquid within the U-shaped tube that has both sides open at the top. Is this fluid in equilibrium?', choices: ['Yes, the fluid must be in equilibrium.', 'No, side A should be lower than side B.', 'No, side B should be lower than side A', 'No, both sides should be at the same height.', 'The answer may be yes or no, depending on the density of the fluid.'], ans: 'No, both sides should be at the same height.', isProblem: false, image: 'qimg11_4_4.png' },
+            { q: 'Consider the drawing of the liquid within the U-shaped tube that has one side sealed. Is this fluid in equilibrium?', choices: ['Yes, the fluid can be in equilibrium.', 'No, side A should be lower than side B.', 'No, side B should be lower than side A', 'No, both sides should be at the same height.', 'The answer may be yes or no, depending on the density of the fluid.'], ans: 'Yes, the fluid can be in equilibrium.', isProblem: false, image: 'qimg11_4_5.png' },
+            { q: 'Which one of the following statements concerning a completely enclosed fluid is true?', choices: ['Any change in applied pressure on the fluid produces an equal change in pressure at all points within the fluid.', 'An increase in pressure in one part of the fluid results in an corresponding decrease in pressure in another part.', 'The pressure at all points within the fluid is independent of any pressure applied on it.', 'Any change in the applied pressure on the fluid produces a change in pressure that depends on direction.', 'The pressure in the fluid is the same at all points within the fluid.'], ans: 'Any change in applied pressure on the fluid produces an equal change in pressure at all points within the fluid.', isProblem: false },
+            { q: 'Which one of the following statements concerning the buoyant force on an object submerged in a liquid is true?', choices: ['The buoyant force will increase with depth if the liquid is incompressible.', 'The buoyant force depends on the volume of the liquid displaced.', 'The buoyant force depends on the weight of the object.', 'The buoyant force depends on the mass of the object.', 'The buoyant force is independent of the density of the liquid.'], ans: 'The buoyant force depends on the volume of the liquid displaced.', isProblem: false },
+            { q: 'Under what circumstances will an object that is solid throughout float on water?', choices: ['A totally solid object can never float on water because it needs to have air in it.', 'If the shape of the object is like that of a boat, it will float.', 'A totally solid object can float on water if its volume is greater than the volume of water it is placed in.', 'A totally solid object can float on water if its density is less than the density of water.', 'A totally solid object can float on water if its density is greater than the density of water.'], ans: 'A totally solid object can float on water if its density is less than the density of water.', isProblem: false },
+            { q: 'Complete the following statement: When an object is placed in a fluid, a buoyant force is exerted on it that is directed upward with a magnitude', choices: ['that is greater than the force of gravity on the object.', 'that is greater than the weight of the fluid displaced by the object.', 'that is equal to the weight of the fluid displaced by the object.', 'that is less than the weight of the fluid displaced by the object.', 'that is equal to the force of gravity on the object.'], ans: 'that is equal to the weight of the fluid displaced by the object.', isProblem: false },
+            { q: 'Which one of the following statements does not describe a property of fluids in motion?', choices: ['The fluid flow can be steady or unsteady.', 'The fluid flow can be compressible or incompressible.', 'The fluid flow can be steadfast or unreliable.', 'The fluid flow can be viscous or nonviscous.', 'The fluid flow can be turbulent or streamline.'], ans: 'The fluid flow can be steadfast or unreliable.', isProblem: false },
+            { q: 'Which one of the following statements best describes streamline flow in fluids.', choices: ['At a given point on a streamline, the fluid velocity is constant.', 'At all points along a streamline, the fluid velocity is constant.', 'Fluid particles only move along streamlines within the fluid. Particles not on a streamline do not move.', 'All particles within the fluid follow straight lines called streamlines and their velocity is constant.', 'At a given point on a streamline, the fluid velocity is varying, but the average velocity along the streamline is constant.'], ans: 'At a given point on a streamline, the fluid velocity is constant.', isProblem: false },
+            { q: 'Which law, principle, or equation specifies that the mass flow rate of a fluid at two positions along a tube must be constant?', choices: ['Archimedes\' principle', 'Pascal\'s principle', 'Poiseuille\'s law', 'equation of continuity', 'Bernoulli\'s equation'], ans: 'equation of continuity', isProblem: false },
+            { q: 'Complete the following statement: Bernoulli\'s principle is a statement of', choices: ['momentum conservation in dynamic fluids.', 'energy conservation in dynamic fluids.', 'mechanical equilibrium in fluids.', 'thermal equilibrium in fluids.', 'hydrostatic equilibrium.'], ans: 'energy conservation in dynamic fluids.', isProblem: false },
+            { q: 'A piece of paper is laying flat on a desk near a closed window. When the window is opened, air rushes over the top of the desk and the paper is observed to be lifted upward and then carried away by the wind. Which of the following statements best describes why the paper was lifted from the desk?', choices: ['The paper was attracted by the force of the wind.', 'The pressure of the moving air above the paper was greater than that of the air between the paper and the desk top.', 'The pressure of the moving air above the paper was less than that of the air between the paper and the desk top.', 'The weight of the paper was reduced by the wind blowing over it and the normal force of the desk was then greater than the weight. The normal force pushes the paper upward.', 'The wind pushed the side of the paper and lifted it upward.'], ans: 'The pressure of the moving air above the paper was less than that of the air between the paper and the desk top.', isProblem: false },
+            { q: 'Which law, principle, or equation can be used to determine the volume flow rate of a liquid that is forced through a hypodermic needle?', choices: ['Archimedes\' principle', 'Pascal\'s principle', 'Poiseuille\'s law', 'the equation of continuity', 'Bernoulli\'s equation'], ans: 'Poiseuille\'s law', isProblem: false },
+            
+            // Problem Solving Questions
+            { q: 'A cube of a certain metal has \\(0.040\\text{ m}\\) sides and its mass is \\(0.48\\text{ kg}\\). What is the mass density of the cube?', choices: ['\\(12\\text{ kg/m}^3\\)', '\\(300\\text{ kg/m}^3\\)', '\\(1800\\text{ kg/m}^3\\)', '\\(7500\\text{ kg/m}^3\\)', '\\(8700\\text{ kg/m}^3\\)'], ans: '\\(7500\\text{ kg/m}^3\\)', isProblem: true },
+            { q: 'Oil is flowing through a tube that has two different cross-sectional areas as shown in the drawing. At position A where the radius of the tube is \\(7.0\\text{ cm}\\), the mass flow rate of the oil is \\(0.025\\text{ kg/s}\\). What is the mass flow rate at position B where the radius of the tube is \\(3.5\\text{ cm}\\)?', choices: ['\\(0.013\\text{ kg/s}\\)', '\\(0.025\\text{ kg/s}\\)', '\\(0.038\\text{ kg/s}\\)', '\\(0.050\\text{ kg/s}\\)', '\\(0.10\\text{ kg/s}\\)'], ans: '\\(0.025\\text{ kg/s}\\)', isProblem: true, image: 'qimg11_8_2.png' }
+        ];
+
+        // --- STATE ---
+        let questions = [];
+        let currentQIndex = 0;
+        let score = 0;
+        let attempts = 1;
+        let altTabs = 0;
+        let isQuizActive = false;
+        let lastQuestionTime = 0;
+        let timePerQuestion = [];
+
+        // --- INIT ---
+        function init() {
+            // Load attempts from cache
+            if(localStorage.getItem('quiz_attempts')) {
+                attempts = parseInt(localStorage.getItem('quiz_attempts')) + 1;
+            }
+            document.getElementById('attempt-display').innerText = attempts;
+            
+            // Separate and shuffle
+            let concepts = rawQuestions.filter(q => !q.isProblem);
+            let problems = rawQuestions.filter(q => q.isProblem);
+            
+            shuffleArray(concepts);
+            shuffleArray(problems);
+            
+            // Randomize choices internally
+            concepts.forEach(q => shuffleArray(q.choices));
+            problems.forEach(q => shuffleArray(q.choices));
+
+            questions = [...concepts, ...problems];
+            document.getElementById('q-total').innerText = questions.length;
+        }
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && isQuizActive) {
+                altTabs++;
+            }
+        });
+
+        // --- LOGIC ---
+        function startQuiz() {
+            // Save attempt early
+            localStorage.setItem('quiz_attempts', attempts);
+            
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('quiz-screen').classList.add('flex');
+            
+            isQuizActive = true;
+            altTabs = 0;
+            timePerQuestion = [];
+            
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = questions[currentQIndex];
+            document.getElementById('q-current').innerText = currentQIndex + 1;
+            document.getElementById('score-display').innerText = score;
+            
+            const qBox = document.getElementById('question-box');
+            const ansContainer = document.getElementById('answers-container');
+            
+            // Remove previous animation class to re-trigger
+            qBox.classList.remove('fade-in');
+            ansContainer.classList.remove('fade-in');
+            void qBox.offsetWidth; // Trigger reflow
+            
+            qBox.classList.add('fade-in');
+            ansContainer.classList.add('fade-in');
+
+            qBox.innerHTML = `<p>${q.q}</p>`;
+
+            let choicesHTML = '';
+            q.choices.forEach((choice, idx) => {
+                choicesHTML += `
+                    <button id="btn-${idx}" onclick="handleAnswer('${choice.replace(/'/g, "\\'")}', ${idx})" 
+                            class="su-btn w-full p-4 rounded-lg text-left min-h-[80px] flex items-center shadow-md">
+                        <span class="mr-4 font-bold text-cyan-500">${String.fromCharCode(65 + idx)}.</span> 
+                        <span>${choice}</span>
+                    </button>
+                `;
+            });
+
+            // Layout handling based on Image
+            if (q.image) {
+                ansContainer.innerHTML = `
+                    <div class="flex flex-col md:flex-row gap-6 w-full items-stretch">
+                        <div class="flex flex-col gap-4 w-full md:w-1/2">
+                            ${choicesHTML}
+                        </div>
+                        <div class="w-full md:w-1/2 bg-black/40 rounded-xl border border-cyan-900/50 flex justify-center items-center p-4">
+                            <img src="${q.image}" alt="Reference Image" class="max-w-full max-h-[400px] object-contain rounded" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'text-gray-500 text-sm\\'>[Image missing: ${q.image}]</span>'">
+                        </div>
+                    </div>
+                `;
+            } else {
+                ansContainer.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                        ${choicesHTML}
+                    </div>
+                `;
+            }
+
+            // MathJax re-render
+            if (window.MathJax) {
+                MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+            }
+
+            lastQuestionTime = Date.now();
+        }
+
+        function handleAnswer(selected, idx) {
+            const q = questions[currentQIndex];
+            const timeTaken = (Date.now() - lastQuestionTime) / 1000;
+            timePerQuestion.push(timeTaken);
+
+            // Disable all buttons
+            const buttons = document.querySelectorAll('button[id^="btn-"]');
+            buttons.forEach(btn => btn.disabled = true);
+
+            const selectedBtn = document.getElementById(`btn-${idx}`);
+            
+            // Find correct button index to highlight it
+            let correctIdx = -1;
+            q.choices.forEach((c, i) => { if(c === q.ans) correctIdx = i; });
+            const correctBtn = document.getElementById(`btn-${correctIdx}`);
+
+            if (selected === q.ans) {
+                score++;
+                selectedBtn.classList.add('correct-ans');
+            } else {
+                selectedBtn.classList.add('wrong-ans');
+                if(correctBtn) correctBtn.classList.add('correct-ans');
+            }
+
+            document.getElementById('score-display').innerText = score;
+
+            // Wait briefly before next
+            setTimeout(() => {
+                currentQIndex++;
+                if (currentQIndex < questions.length) {
+                    renderQuestion();
+                } else {
+                    endQuiz();
+                }
+            }, 1000);
+        }
+
+        function endQuiz() {
+            isQuizActive = false;
+            document.getElementById('quiz-screen').classList.remove('flex');
+            document.getElementById('quiz-screen').classList.add('hidden');
+            
+            const resultScreen = document.getElementById('result-screen');
+            resultScreen.classList.remove('hidden');
+            resultScreen.classList.add('flex', 'fade-in');
+
+            // Analytics calculation
+            const totalTime = timePerQuestion.reduce((a, b) => a + b, 0);
+            const avgTime = totalTime / questions.length;
+            const finalScorePercent = Math.round((score / questions.length) * 100);
+
+            document.getElementById('final-score').innerText = finalScorePercent;
+            document.getElementById('final-attempts').innerText = attempts;
+
+            calculatePath(finalScorePercent, avgTime, altTabs);
+        }
+
+        function calculatePath(S, T, A) {
+            let path = "";
+            let aeonText = "";
+            let file = "";
+
+            if (A >= 3) {
+                path = "Nihility"; file = "nihility.png";
+                aeonText = "Wandering eyes... straying from the simulation... seeking answers in the void outside this window. It is all meaningless. IX casts a shadow over your fragmented attention. Why try at all when the ultimate end is silence? Your knowledge dissolves into nothingness.";
+            } else if (S === 100 && T < 10) {
+                path = "The Hunt"; file = "hunt.png";
+                aeonText = "Unerring accuracy. Blinding speed. Your thoughts pierce through the equations like a Lux Arrow tearing through the cosmos! Lan acknowledges your swift retribution against ignorance. Do not stop. Keep hunting.";
+            } else if (S === 100 && T >= 10) {
+                path = "Erudition"; file = "erudition.png";
+                aeonText = "The calculations are complete. The universe is a grand equation, and you have derived the optimal solution. Nous observes your intellect with cold, mechanical approval. You have solved the enigma of the fluids, proving that true genius requires patience.";
+            } else if (S <= 50 && T < 8) {
+                path = "Destruction"; file = "destruction.png";
+                aeonText = "Tear it down! You rushed blindly into the fray, scattering answers like shattered stars! Nanook smiles upon your chaotic defiance of reason and careful thought. Burn the test, let the ashes fuel your true power!";
+            } else if (S <= 50 && T >= 15) {
+                path = "Remembrance"; file = "remembrance.png";
+                aeonText = "You lingered on each word, as if trying to recall a lost memory frozen in ice. Fuli observes your struggle to grasp the fading past. Your score is but a mirror to the shattered fragments of knowledge you desperately hold.";
+            } else if (S > 50 && S < 100 && T > 15) {
+                path = "Preservation"; file = "preservation.png";
+                aeonText = "Steady and enduring. You took your time, building a fortress of thought around each question. Qlipoth strikes the celestial hammer in recognition of your unyielding patience. The Amber Lord protects those who build strong foundations.";
+            } else if (A === 0 && T < 12 && S > 60) {
+                path = "Elation"; file = "elation.png";
+                aeonText = "Aha laughs! What a delightful performance! Neither obsessively perfect nor tragically flawed, you danced through the fluid mechanics with a lighthearted spirit! The tavern rejoices in your unpredictable amusement!";
+            } else if (S >= 70) {
+                path = "Harmony"; file = "harmony.png";
+                aeonText = "Your pace and your knowledge resonate in perfect equilibrium. Xipe embraces your balanced approach. A thousand voices sing in unity, celebrating a mind that finds the middle path among the stars.";
+            } else {
+                path = "Abundance"; file = "abundance.png";
+                aeonText = "Every mistake is a seed, every second spent is water. Yaoshi blesses your journey of continuous growth. You may not be perfect today, but the cycle of life promises endless chances to bloom and understand.";
+            }
+
+            document.getElementById('path-name').innerText = path;
+            document.getElementById('aeon-message').innerText = aeonText;
+            document.getElementById('path-image').src = file;
+        }
+
+        function takeScreenshot() {
+            const el = document.getElementById('result-screen');
+            // Hide the button for the screenshot
+            const btn = el.querySelector('button');
+            btn.style.display = 'none';
+            
+            html2canvas(el, { backgroundColor: '#0b0e14' }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = `HSR_Path_${document.getElementById('path-name').innerText.replace(/\s/g, '_')}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                
+                // Restore button
+                btn.style.display = 'block';
+            });
+        }
+
+        // Utility: Fisher-Yates Shuffle
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Boot
+        window.onload = init;
+    </script>
+</body>
+</html>
