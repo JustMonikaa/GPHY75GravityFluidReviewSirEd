@@ -284,7 +284,21 @@
             
             <p class="text-cyan-400 tracking-[0.3em] text-sm mb-2 font-bold z-10">SIMULATION CONCLUDED</p>
             <h2 class="text-3xl font-semibold mb-2 z-10 text-gray-200">Trailblazer <span id="display-name" class="text-white"></span></h2>
+            
+            <!-- Statistics -->
+            <div class="z-10 flex space-x-6 text-gray-300 font-mono mb-4 text-sm md:text-base">
+                <p>Score: <span id="final-score" class="text-cyan-300 font-bold text-xl"></span>%</p>
+                <p>Attempt: <span id="final-attempts" class="text-cyan-300 font-bold text-xl"></span></p>
+            </div>
+            
+            <!-- Path Image -->
+            <img id="path-image" src="" alt="Path Image" class="z-10 w-32 h-32 md:w-48 md:h-48 object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" onerror="this.style.display='none'">
+            
             <h3 class="text-4xl md:text-5xl font-bold mb-6 path-title z-10">Path of <span id="path-name"></span></h3>
+            
+            <!-- Aeon Message -->
+            <p id="aeon-message" class="z-10 text-gray-300 mb-8 max-w-2xl text-sm md:text-base leading-relaxed italic border-l-4 border-cyan-500 pl-4 text-left bg-black/40 p-4 rounded-r-lg shadow-inner"></p>
+
             <button onclick="takeScreenshot()" class="su-btn px-8 py-3 rounded font-bold tracking-widest text-cyan-100 uppercase z-10 border border-cyan-400 hover:bg-cyan-900">
                 Take Screenshot
             </button>
@@ -337,6 +351,23 @@
         let timePerQuestion = [];
         let playerName = "Trailblazer";
 
+        // Variables for Debug Mode
+        let isDebugMode = false;
+        let debugPathIndex = 0;
+
+        // Path definitions extracted for easy cycling in Debug Mode
+        const pathDefinitions = [
+            { id: "nihility", name: "Nihility", file: "nihility.png", bgClass: "bg-nihility", text: "Wandering eyes... straying from the parameters of the simulation... seeking answers in the vast void outside this single window. It is all meaningless. IX, the sleeping Aeon, casts a heavy shadow over your fragmented attention. Why try at all when the ultimate end of all knowledge is silence? Your understanding of fluid mechanics dissolves into the encroaching nothingness, a mere drop in a lightless ocean. The simulation yields no absolute truth for you, only the comfort of the void." },
+            { id: "hunt", name: "The Hunt", file: "hunt.png", bgClass: "bg-hunt", text: "Unerring accuracy. Blinding, terrifying speed. Your thoughts pierce through the complex equations like a Lux Arrow tearing through the fabric of the cosmos! Lan the Reignbow Arbiter acknowledges your swift, merciless retribution against the enemies of ignorance. You did not hesitate when faced with the pressure of the fluid; you severed the problem at its root. Do not stop. The hunt for absolute knowledge never ends." },
+            { id: "erudition", name: "Erudition", file: "erudition.png", bgClass: "bg-erudition", text: "The calculations are complete. The universe is a grand, solvable equation, and you have carefully derived the optimal solution. Nous observes your intellect with cold, mechanical approval. You did not rush; you analyzed every variable, every pressure differential, every buoyant force. You have solved the enigma of the fluids, proving that true genius requires patience, precision, and an unwavering gaze into the depths of the data." },
+            { id: "destruction", name: "Destruction", file: "destruction.png", bgClass: "bg-destruction", text: "Tear it down! You rushed blindly into the fray, scattering answers like shattered stars in a dying galaxy! Nanook smiles upon your chaotic defiance of reason and careful thought. Who needs to calculate the flow rate when you can simply break the pipe? Your score reflects a beautiful, reckless entropy. Burn the test, let the ashes fuel your true power, and let the universe tremble at your uncalculated might!" },
+            { id: "remembrance", name: "Remembrance", file: "remembrance.png", bgClass: "bg-remembrance", text: "You lingered deeply on each word, as if trying to recall a lost, ancient memory frozen in eternal ice. Fuli observes your quiet struggle to grasp the fading past of lectures and formulas. Your final score is but a mirror to the shattered, beautiful fragments of knowledge you desperately hold onto. Though you may have forgotten the precise mechanics, the memory of the attempt is forever preserved in the Hall of Memories." },
+            { id: "preservation", name: "Preservation", file: "preservation.png", bgClass: "bg-preservation", text: "Steady, enduring, and unmovable. You took your time, meticulously building a fortress of thought around each concept and problem. Qlipoth, the Amber Lord, strikes the celestial hammer in resounding recognition of your unyielding patience and structural integrity. You may not have been the fastest, nor entirely perfect, but you have built a strong, enduring foundation of knowledge that will withstand the test of time." },
+            { id: "elation", name: "Elation", file: "elation.png", bgClass: "bg-elation", text: "Aha laughs! What a delightful, unpredictable performance! Neither obsessively perfect nor tragically flawed, you danced through the dense fluid mechanics with a refreshingly lighthearted spirit! The Tavern rejoices in your amusement! Why take the simulation so seriously when the joy is in the unpredictable flow of the liquid itself? You are a true mask among the stars!" },
+            { id: "harmony", name: "Harmony", file: "harmony.png", bgClass: "bg-harmony", text: "Your pace and your knowledge resonate in perfect, beautiful equilibrium. Xipe, the manifold Aeon, embraces your balanced approach to the simulation. You demonstrated neither reckless speed nor stagnant hesitation, but a unified flow akin to the very fluids you studied. A thousand voices sing in unity, celebrating a mind that finds the middle path, harmonizing data and intuition among the stars." },
+            { id: "abundance", name: "Abundance", file: "abundance.png", bgClass: "bg-abundance", text: "Do not despair the incorrect variables. Every mistake is a seed; every second spent pondering is water for the soul. Yaoshi the Plagues Author blesses your journey of continuous, unending growth. You may not have achieved perfection in this cycle, but the cycle of life promises endless chances to bloom, to correct, and to finally understand. Your potential is as boundless as the living universe itself." }
+        ];
+
         // --- INIT ---
         function init() {
             // Load attempts from cache
@@ -364,6 +395,47 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden' && isQuizActive) {
                 altTabs++;
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            // Toggle Debug Mode & Jump to Results: Ctrl + Shift + P
+            if (e.ctrlKey && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+                e.preventDefault(); // Prevent browser print dialog
+                isDebugMode = true;
+                
+                const resultScreen = document.getElementById('result-screen');
+                if (resultScreen.classList.contains('hidden')) {
+                    // Hide all other screens
+                    ['start-screen', 'quiz-screen', 'name-screen', 'glitch-screen'].forEach(id => {
+                        const el = document.getElementById(id);
+                        el.classList.add('hidden');
+                        el.classList.remove('flex');
+                    });
+                    
+                    // Setup dummy stats for preview
+                    playerName = "Debug Trailblazer";
+                    document.getElementById('display-name').innerText = playerName;
+                    document.getElementById('final-score').innerText = "100";
+                    document.getElementById('final-attempts').innerText = attempts;
+                    
+                    // Show result screen
+                    resultScreen.classList.remove('hidden');
+                    resultScreen.classList.add('flex', 'fade-in');
+                    
+                    renderPath(pathDefinitions[debugPathIndex]);
+                }
+            }
+
+            // Cycle Paths: Left / Right arrows
+            if (isDebugMode && document.getElementById('result-screen').classList.contains('flex')) {
+                if (e.key === 'ArrowRight') {
+                    debugPathIndex = (debugPathIndex + 1) % pathDefinitions.length;
+                    renderPath(pathDefinitions[debugPathIndex]);
+                } else if (e.key === 'ArrowLeft') {
+                    debugPathIndex = (debugPathIndex - 1 + pathDefinitions.length) % pathDefinitions.length;
+                    renderPath(pathDefinitions[debugPathIndex]);
+                }
             }
         });
 
@@ -529,67 +601,41 @@
         }
 
         function calculatePath(S, T, A) {
-            let path = "";
-            let aeonText = "";
-            let file = "";
-            let bgClass = "";
+            let pathId = "abundance";
 
             if (A >= 3) {
-                path = "Nihility"; 
-                file = "nihility.png";
-                bgClass = "bg-nihility";
-                aeonText = "Wandering eyes... straying from the parameters of the simulation... seeking answers in the vast void outside this single window. It is all meaningless. IX, the sleeping Aeon, casts a heavy shadow over your fragmented attention. Why try at all when the ultimate end of all knowledge is silence? Your understanding of fluid mechanics dissolves into the encroaching nothingness, a mere drop in a lightless ocean. The simulation yields no absolute truth for you, only the comfort of the void.";
+                pathId = "nihility";
             } else if (S === 100 && T < 10) {
-                path = "The Hunt"; 
-                file = "hunt.png";
-                bgClass = "bg-hunt";
-                aeonText = "Unerring accuracy. Blinding, terrifying speed. Your thoughts pierce through the complex equations like a Lux Arrow tearing through the fabric of the cosmos! Lan the Reignbow Arbiter acknowledges your swift, merciless retribution against the enemies of ignorance. You did not hesitate when faced with the pressure of the fluid; you severed the problem at its root. Do not stop. The hunt for absolute knowledge never ends.";
+                pathId = "hunt";
             } else if (S === 100 && T >= 10) {
-                path = "Erudition"; 
-                file = "erudition.png";
-                bgClass = "bg-erudition";
-                aeonText = "The calculations are complete. The universe is a grand, solvable equation, and you have carefully derived the optimal solution. Nous observes your intellect with cold, mechanical approval. You did not rush; you analyzed every variable, every pressure differential, every buoyant force. You have solved the enigma of the fluids, proving that true genius requires patience, precision, and an unwavering gaze into the depths of the data.";
+                pathId = "erudition";
             } else if (S <= 50 && T < 8) {
-                path = "Destruction"; 
-                file = "destruction.png";
-                bgClass = "bg-destruction";
-                aeonText = "Tear it down! You rushed blindly into the fray, scattering answers like shattered stars in a dying galaxy! Nanook smiles upon your chaotic defiance of reason and careful thought. Who needs to calculate the flow rate when you can simply break the pipe? Your score reflects a beautiful, reckless entropy. Burn the test, let the ashes fuel your true power, and let the universe tremble at your uncalculated might!";
+                pathId = "destruction";
             } else if (S <= 50 && T >= 15) {
-                path = "Remembrance"; 
-                file = "remembrance.png";
-                bgClass = "bg-remembrance";
-                aeonText = "You lingered deeply on each word, as if trying to recall a lost, ancient memory frozen in eternal ice. Fuli observes your quiet struggle to grasp the fading past of lectures and formulas. Your final score is but a mirror to the shattered, beautiful fragments of knowledge you desperately hold onto. Though you may have forgotten the precise mechanics, the memory of the attempt is forever preserved in the Hall of Memories.";
+                pathId = "remembrance";
             } else if (S > 50 && S < 100 && T > 15) {
-                path = "Preservation"; 
-                file = "preservation.png";
-                bgClass = "bg-preservation";
-                aeonText = "Steady, enduring, and unmovable. You took your time, meticulously building a fortress of thought around each concept and problem. Qlipoth, the Amber Lord, strikes the celestial hammer in resounding recognition of your unyielding patience and structural integrity. You may not have been the fastest, nor entirely perfect, but you have built a strong, enduring foundation of knowledge that will withstand the test of time.";
+                pathId = "preservation";
             } else if (A === 0 && T < 12 && S > 60) {
-                path = "Elation"; 
-                file = "elation.png";
-                bgClass = "bg-elation";
-                aeonText = "Aha laughs! What a delightful, unpredictable performance! Neither obsessively perfect nor tragically flawed, you danced through the dense fluid mechanics with a refreshingly lighthearted spirit! The Tavern rejoices in your amusement! Why take the simulation so seriously when the joy is in the unpredictable flow of the liquid itself? You are a true mask among the stars!";
+                pathId = "elation";
             } else if (S >= 70) {
-                path = "Harmony"; 
-                file = "harmony.png";
-                bgClass = "bg-harmony";
-                aeonText = "Your pace and your knowledge resonate in perfect, beautiful equilibrium. Xipe, the manifold Aeon, embraces your balanced approach to the simulation. You demonstrated neither reckless speed nor stagnant hesitation, but a unified flow akin to the very fluids you studied. A thousand voices sing in unity, celebrating a mind that finds the middle path, harmonizing data and intuition among the stars.";
-            } else {
-                path = "Abundance"; 
-                file = "abundance.png";
-                bgClass = "bg-abundance";
-                aeonText = "Do not despair the incorrect variables. Every mistake is a seed; every second spent pondering is water for the soul. Yaoshi the Plagues Author blesses your journey of continuous, unending growth. You may not have achieved perfection in this cycle, but the cycle of life promises endless chances to bloom, to correct, and to finally understand. Your potential is as boundless as the living universe itself.";
+                pathId = "harmony";
             }
 
-            document.getElementById('path-name').innerText = path;
-            document.getElementById('aeon-message').innerText = aeonText;
+            const pathData = pathDefinitions.find(p => p.id === pathId);
+            renderPath(pathData);
+        }
+
+        function renderPath(pathData) {
+            document.getElementById('path-name').innerText = pathData.name;
+            document.getElementById('aeon-message').innerText = pathData.text;
             
-            // Handle Image loading (supports png, fallback to jpg or webp if needed based on user preference, but defaults to png)
-            document.getElementById('path-image').src = file;
+            const imgEl = document.getElementById('path-image');
+            imgEl.src = pathData.file;
+            imgEl.style.display = 'block'; // Unhide just in case it errored on previous cycle
 
             // Apply Background
             const bgElement = document.getElementById('result-bg');
-            bgElement.className = `absolute inset-0 pointer-events-none transition-all duration-1000 ${bgClass}`;
+            bgElement.className = `absolute inset-0 pointer-events-none transition-all duration-1000 ${pathData.bgClass}`;
         }
 
         function takeScreenshot() {
